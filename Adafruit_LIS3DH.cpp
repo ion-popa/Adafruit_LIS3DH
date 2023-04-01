@@ -121,28 +121,20 @@ bool Adafruit_LIS3DH::begin(uint8_t i2caddr, lis3dh_dataRate_t dataRate, lis3dh_
     /* Check connection */
     if (getDeviceID() != LIS3DH_WHO_AM_I_VALUE) {
         /* No LIS3DH detected ... return false */
-        // Serial.println(deviceid, HEX);
         return false;
     }
-    // Adafruit_BusIO_Register _ctrl1 = Adafruit_BusIO_Register(
-    //     i2c_dev, spi_dev, ADDRBIT8_HIGH_TOREAD, LIS3DH_REG_CTRL1, 1);
-    // _ctrl1.write(0x07); // enable all axes, normal mode
-
     writeReg(LIS3DH_REG_CTRL5, 0x80);
-    delay(10);
+    delay(15);
 
     setDataRate(dataRate, powerMode);
     enableAxes(activeAxis);
 
-    Adafruit_BusIO_Register _ctrl4 = Adafruit_BusIO_Register(
-        i2c_dev, spi_dev, ADDRBIT8_HIGH_TOREAD, LIS3DH_REG_CTRL4, 1);
-    // _ctrl4.write(0x80); //  BDU enabled
-    _ctrl4.write(0x00); //  BDU disabled
+    writeReg(LIS3DH_REG_CTRL4, 0x80);
+    writeReg(LIS3DH_REG_CTRL2, 0);
+    // Adafruit_BusIO_Register _ctrl2 = Adafruit_BusIO_Register(
+    //     i2c_dev, spi_dev, ADDRBIT8_HIGH_TOREAD, LIS3DH_REG_CTRL2, 1);
 
-    Adafruit_BusIO_Register _ctrl2 = Adafruit_BusIO_Register(
-        i2c_dev, spi_dev, ADDRBIT8_HIGH_TOREAD, LIS3DH_REG_CTRL2, 1);
-
-    _ctrl2.write(1);
+    // _ctrl2.write(1);
 
     return true;
 }
@@ -151,22 +143,18 @@ bool Adafruit_LIS3DH::begin(uint8_t i2caddr, lis3dh_dataRate_t dataRate, lis3dh_
  *  @brief  Get Device ID from LIS3DH_REG_WHOAMI
  *  @return WHO AM I value
  */
-uint8_t Adafruit_LIS3DH::getDeviceID(void) {
-    Adafruit_BusIO_Register _chip_id = Adafruit_BusIO_Register(
-        i2c_dev, spi_dev, ADDRBIT8_HIGH_TOREAD, LIS3DH_REG_WHOAMI, 1);
+uint8_t Adafruit_LIS3DH::getDeviceID(void)
+{
 
-    return _chip_id.read();
+    return readReg(LIS3DH_REG_WHOAMI);
 }
 /*!
  *  @brief  Check to see if new data available
  *  @return true if there is new data available, false otherwise
  */
-bool Adafruit_LIS3DH::haveNewData(void) {
-    Adafruit_BusIO_Register status_2 = Adafruit_BusIO_Register(
-        i2c_dev, spi_dev, ADDRBIT8_HIGH_TOREAD, LIS3DH_REG_STATUS2, 1);
-    Adafruit_BusIO_RegisterBits zyx_data_available =
-        Adafruit_BusIO_RegisterBits(&status_2, 1, 3);
-    return zyx_data_available.read();
+bool Adafruit_LIS3DH::haveNewData(void)
+{
+    return (readReg(LIS3DH_REG_STATUS2) | LIS3DH_STATUS_REG_ZYXDA) > 0;
 }
 
 /*!
@@ -180,29 +168,23 @@ void Adafruit_LIS3DH::read(uint8_t fifoIdx)
     {
         register_address |= 0x80; // set [7] for auto-increment
     }
-    else {
+    else
+    {
         register_address |= 0x40; // set [6] for auto-increment
         register_address |= 0x80; // set [7] for read
     }
-
-    // Adafruit_BusIO_Register xl_data = Adafruit_BusIO_Register(
-    //     i2c_dev, spi_dev, ADDRBIT8_HIGH_TOREAD, register_address, 6);
-    // uint8_t buffer[6];
-    // xl_data.read(buffer, 6);
 
     if (!_fifoEnabled)
     {
         fifoIdx = 0;
     }
-    fifoIdx = min(fifoIdx, min(LIS3DH_FIFO_MAX_DEPTH,getFifoSize()));
+    fifoIdx = min(fifoIdx, min(LIS3DH_FIFO_MAX_DEPTH, getFifoSize()));
 
     do
     {
         readRegBuffer(register_address, buffer, 6);
         fifoIdx--;
     } while (fifoIdx + 1 > 0 && fifoIsEmpty() == false);
-
-
 
     x = buffer[0];
     x |= ((uint16_t)buffer[1]) << 8;
@@ -223,7 +205,8 @@ void Adafruit_LIS3DH::read(uint8_t fifoIdx)
  *          adc index. possible values (1, 2, 3).
  *  @return auxilary ADC value
  */
-int16_t Adafruit_LIS3DH::readADC(uint8_t adc) {
+int16_t Adafruit_LIS3DH::readADC(uint8_t adc)
+{
     if ((adc < 1) || (adc > 3))
         return 0;
     adc--; // switch to 0 indexed
@@ -231,7 +214,8 @@ int16_t Adafruit_LIS3DH::readADC(uint8_t adc) {
     uint16_t value;
     uint8_t reg = LIS3DH_REG_OUTADC1_L + (adc * 2);
 
-    if (i2c_dev) {
+    if (i2c_dev)
+    {
         reg |= 0x80; // set [7] for auto-increment
     }
     else {
@@ -240,10 +224,7 @@ int16_t Adafruit_LIS3DH::readADC(uint8_t adc) {
     }
 
     uint8_t buffer[2];
-    Adafruit_BusIO_Register adc_data =
-        Adafruit_BusIO_Register(i2c_dev, spi_dev, ADDRBIT8_HIGH_TOREAD, reg, 2);
-
-    adc_data.read(buffer, 2);
+    readRegBuffer(reg, buffer, 2);
 
     value = buffer[0];
     value |= ((uint16_t)buffer[1]) << 8;
@@ -267,77 +248,47 @@ int16_t Adafruit_LIS3DH::readADC(uint8_t adc) {
  *   				 sets time window (default 255)
  */
 
-void Adafruit_LIS3DH::setClick(uint8_t c, uint8_t clickthresh,
-    uint8_t timelimit, uint8_t timelatency,
-    uint8_t timewindow) {
-
-    Adafruit_BusIO_Register ctrl3 = Adafruit_BusIO_Register(
-        i2c_dev, spi_dev, ADDRBIT8_HIGH_TOREAD, LIS3DH_REG_CTRL3, 1);
-    Adafruit_BusIO_RegisterBits i1_click =
-        Adafruit_BusIO_RegisterBits(&ctrl3, 1, 7);
-
-    Adafruit_BusIO_Register click_cfg = Adafruit_BusIO_Register(
-        i2c_dev, spi_dev, ADDRBIT8_HIGH_TOREAD, LIS3DH_REG_CLICKCFG, 1);
-
-    if (!c) {
+void Adafruit_LIS3DH::setClick(uint8_t c, uint8_t clickthresh, uint8_t timelimit, uint8_t timelatency, uint8_t timewindow)
+{
+    if (!c)
+    {
         // disable int
-        i1_click.write(0); // disable i1 click
-        click_cfg.write(0);
+        writeRegBits(LIS3DH_REG_CTRL3, 0, LIS3DH_REG_CTRL3_I1_CLICK_BITS, LIS3DH_REG_CTRL3_I1_CLICK_SHIFT);
+        writeReg(LIS3DH_REG_CLICKCFG, 0);
         return;
     }
     // else...
 
-    i1_click.write(1); // enable i1 click
-
-    Adafruit_BusIO_Register ctrl5 = Adafruit_BusIO_Register(
-        i2c_dev, spi_dev, ADDRBIT8_HIGH_TOREAD, LIS3DH_REG_CTRL5, 1);
-
-    Adafruit_BusIO_RegisterBits int1_latch_bit =
-        Adafruit_BusIO_RegisterBits(&ctrl5, 1, 3);
-    int1_latch_bit.write(true);
+    writeRegBits(LIS3DH_REG_CTRL3, 1, LIS3DH_REG_CTRL3_I1_CLICK_BITS, LIS3DH_REG_CTRL3_I1_CLICK_SHIFT);
+    writeRegBits(LIS3DH_REG_CTRL5, true, LIS3DH_REG_CTRL5_LIR_INT1_BITS, LIS3DH_REG_CTRL5_LIR_INT1_SHIFT);
 
     if (c == 1)
-        click_cfg.write(0x15); // turn on all axes & singletap
+        writeReg(LIS3DH_REG_CLICKCFG, 0x15);
     if (c == 2)
-        click_cfg.write(0x2A); // turn on all axes & doubletap
+        writeReg(LIS3DH_REG_CLICKCFG, 0x2A);
 
-    Adafruit_BusIO_Register click_ths = Adafruit_BusIO_Register(
-        i2c_dev, spi_dev, ADDRBIT8_HIGH_TOREAD, LIS3DH_REG_CLICKTHS, 1);
-    click_ths.write(clickthresh); // arbitrary
-
-    Adafruit_BusIO_Register time_limit = Adafruit_BusIO_Register(
-        i2c_dev, spi_dev, ADDRBIT8_HIGH_TOREAD, LIS3DH_REG_TIMELIMIT, 1);
-    time_limit.write(timelimit); // arbitrary
-
-    Adafruit_BusIO_Register time_latency = Adafruit_BusIO_Register(
-        i2c_dev, spi_dev, ADDRBIT8_HIGH_TOREAD, LIS3DH_REG_TIMELATENCY, 1);
-    time_latency.write(timelatency); // arbitrary
-
-    Adafruit_BusIO_Register time_window = Adafruit_BusIO_Register(
-        i2c_dev, spi_dev, ADDRBIT8_HIGH_TOREAD, LIS3DH_REG_TIMEWINDOW, 1);
-    time_window.write(timewindow); // arbitrary
+    writeReg(LIS3DH_REG_CLICKTHS, clickthresh);
+    writeReg(LIS3DH_REG_TIMELIMIT, timelimit);
+    writeReg(LIS3DH_REG_TIMELATENCY, timelatency);
+    writeReg(LIS3DH_REG_TIMEWINDOW, timewindow);
 }
 
 /*!
  *   @brief  Get uint8_t for single or double click
  *   @return register LIS3DH_REG_CLICKSRC
  */
-uint8_t Adafruit_LIS3DH::getClick(void) {
-    Adafruit_BusIO_Register click_reg = Adafruit_BusIO_Register(
-        i2c_dev, spi_dev, ADDRBIT8_HIGH_TOREAD, LIS3DH_REG_CLICKSRC, 1);
-
-    return click_reg.read();
+uint8_t Adafruit_LIS3DH::getClick(void)
+{
+    return readReg(LIS3DH_REG_CLICKSRC);
 }
 
 /*!
  *   @brief  Get uint8_t for INT1 source and clear interrupt
  *   @return register LIS3DH_REG_INT1SRC
  */
-uint8_t Adafruit_LIS3DH::readAndClearInterrupt(void) {
-    Adafruit_BusIO_Register int_reg = Adafruit_BusIO_Register(
-        i2c_dev, spi_dev, ADDRBIT8_HIGH_TOREAD, LIS3DH_REG_INT1SRC, 1);
-
-    return int_reg.read();
+uint8_t Adafruit_LIS3DH::readAndClearInterrupt(void)
+{
+    return readReg(LIS3DH_REG_INT1SRC);
 }
 
 /**
@@ -348,19 +299,13 @@ uint8_t Adafruit_LIS3DH::readAndClearInterrupt(void) {
  * @param int_pin which DRDY interrupt to enable; 1 for DRDY1, 2 for DRDY2
  * @return true: success false: failure
  */
-bool Adafruit_LIS3DH::enableDRDY(bool enable_drdy, uint8_t int_pin) {
-    Adafruit_BusIO_Register _ctrl3 = Adafruit_BusIO_Register(
-        i2c_dev, spi_dev, ADDRBIT8_HIGH_TOREAD, LIS3DH_REG_CTRL3, 1);
-    Adafruit_BusIO_RegisterBits _drdy1_int_enable =
-        Adafruit_BusIO_RegisterBits(&_ctrl3, 1, 4);
-    Adafruit_BusIO_RegisterBits _drdy2_int_enable =
-        Adafruit_BusIO_RegisterBits(&_ctrl3, 1, 3);
-
+bool Adafruit_LIS3DH::enableDRDY(bool enable_drdy, uint8_t int_pin)
+{
     if (int_pin == 1) {
-        return _drdy1_int_enable.write(enable_drdy);
+        return writeRegBits(LIS3DH_REG_CTRL3, enable_drdy, LIS3DH_REG_CTRL3_I1_ZYXDA_BITS, LIS3DH_REG_CTRL3_I1_ZYXDA_SHIFT);
     }
     else if (int_pin == 2) {
-        return _drdy2_int_enable.write(enable_drdy);
+        return writeRegBits(LIS3DH_REG_CTRL3, enable_drdy, LIS3DH_REG_CTRL3_I1_321DA_BITS, LIS3DH_REG_CTRL3_I1_321DA_SHIFT);
     }
     else {
         return false;
@@ -372,14 +317,9 @@ bool Adafruit_LIS3DH::enableDRDY(bool enable_drdy, uint8_t int_pin) {
  *   @param  range
  *           range value
  */
-void Adafruit_LIS3DH::setRange(lis3dh_range_t range) {
-
-    Adafruit_BusIO_Register _ctrl4 = Adafruit_BusIO_Register(
-        i2c_dev, spi_dev, ADDRBIT8_HIGH_TOREAD, LIS3DH_REG_CTRL4, 1);
-
-    Adafruit_BusIO_RegisterBits range_bits =
-        Adafruit_BusIO_RegisterBits(&_ctrl4, 2, 4);
-    range_bits.write(range);
+void Adafruit_LIS3DH::setRange(lis3dh_range_t range)
+{
+    writeRegBits(LIS3DH_REG_CTRL4, range, LIS3DH_REG_CTRL4_FS_BITS, LIS3DH_REG_CTRL4_FS_SHIFT);
     _range = range;
     delay(15); // delay to let new setting settle
 }
@@ -388,14 +328,9 @@ void Adafruit_LIS3DH::setRange(lis3dh_range_t range) {
  *  @brief  Gets the g range for the accelerometer
  *  @return Returns g range value
  */
-lis3dh_range_t Adafruit_LIS3DH::getRange(void) {
-    Adafruit_BusIO_Register _ctrl4 = Adafruit_BusIO_Register(
-        i2c_dev, spi_dev, ADDRBIT8_HIGH_TOREAD, LIS3DH_REG_CTRL4, 1);
-
-    Adafruit_BusIO_RegisterBits range_bits =
-        Adafruit_BusIO_RegisterBits(&_ctrl4, 2, 4);
-    _range = (lis3dh_range_t)range_bits.read();
-    return _range;
+lis3dh_range_t Adafruit_LIS3DH::getRange(void)
+{
+    return (lis3dh_range_t)readRegBits(LIS3DH_REG_CTRL4, LIS3DH_REG_CTRL4_FS_BITS, LIS3DH_REG_CTRL4_FS_SHIFT);
 }
 
 /*!
@@ -403,13 +338,8 @@ lis3dh_range_t Adafruit_LIS3DH::getRange(void) {
  *  @param  dataRate
  *          data rate value
  */
-void Adafruit_LIS3DH::setDataRate(lis3dh_dataRate_t dataRate, lis3dh_powerMode_t powerMode) {
-    Adafruit_BusIO_Register _ctrl1 = Adafruit_BusIO_Register(
-        i2c_dev, spi_dev, ADDRBIT8_HIGH_TOREAD, LIS3DH_REG_CTRL1, 1);
-    Adafruit_BusIO_RegisterBits data_rate_bits =
-        Adafruit_BusIO_RegisterBits(&_ctrl1, 4, 4);
-
-
+void Adafruit_LIS3DH::setDataRate(lis3dh_dataRate_t dataRate, lis3dh_powerMode_t powerMode)
+{
     switch (dataRate)
     {
         case LIS3DH_DATARATE_LOWPOWER_1K6HZ:
@@ -422,8 +352,7 @@ void Adafruit_LIS3DH::setDataRate(lis3dh_dataRate_t dataRate, lis3dh_powerMode_t
         }break;
 
     }
-
-    data_rate_bits.write(dataRate);
+    writeRegBits(LIS3DH_REG_CTRL1, dataRate, LIS3DH_REG_CTRL1_ODR_BITS, LIS3DH_REG_CTRL1_ODR_SHIFT);
     _odr = dataRate;
 }
 
@@ -431,58 +360,9 @@ void Adafruit_LIS3DH::setDataRate(lis3dh_dataRate_t dataRate, lis3dh_powerMode_t
  *   @brief  Gets the data rate for the LIS3DH (controls power consumption)
  *   @return Returns Data Rate value
  */
-lis3dh_dataRate_t Adafruit_LIS3DH::getDataRate(void) {
-    Adafruit_BusIO_Register _ctrl1 = Adafruit_BusIO_Register(
-        i2c_dev, spi_dev, ADDRBIT8_HIGH_TOREAD, LIS3DH_REG_CTRL1, 1);
-    Adafruit_BusIO_RegisterBits data_rate_bits =
-        Adafruit_BusIO_RegisterBits(&_ctrl1, 4, 4);
-
-    return (lis3dh_dataRate_t)data_rate_bits.read();
-}
-
-/*!
- *  @brief  Gets the most recent sensor event
- *  @param  *event
- *          sensor event that we want to read
- *  @return true if successful
- */
-bool Adafruit_LIS3DH::getEvent(sensors_event_t* event) {
-    /* Clear the event */
-    memset(event, 0, sizeof(sensors_event_t));
-
-    event->version = sizeof(sensors_event_t);
-    event->sensor_id = _sensorID;
-    event->type = SENSOR_TYPE_ACCELEROMETER;
-    event->timestamp = 0;
-
-    read();
-
-    event->acceleration.x = x_g * SENSORS_GRAVITY_STANDARD;
-    event->acceleration.y = y_g * SENSORS_GRAVITY_STANDARD;
-    event->acceleration.z = z_g * SENSORS_GRAVITY_STANDARD;
-
-    return true;
-}
-
-/*!
- *   @brief  Gets the sensor_t data
- *   @param  *sensor
- *           sensor that we want to write data into
- */
-void Adafruit_LIS3DH::getSensor(sensor_t* sensor) {
-    /* Clear the sensor_t object */
-    memset(sensor, 0, sizeof(sensor_t));
-
-    /* Insert the sensor name in the fixed length char array */
-    strncpy(sensor->name, "LIS3DH", sizeof(sensor->name) - 1);
-    sensor->name[sizeof(sensor->name) - 1] = 0;
-    sensor->version = 1;
-    sensor->sensor_id = _sensorID;
-    sensor->type = SENSOR_TYPE_ACCELEROMETER;
-    sensor->min_delay = 0;
-    sensor->max_value = 0;
-    sensor->min_value = 0;
-    sensor->resolution = 0;
+lis3dh_dataRate_t Adafruit_LIS3DH::getDataRate(void)
+{
+    return (lis3dh_dataRate_t)readRegBits(LIS3DH_REG_CTRL1, LIS3DH_REG_CTRL1_ODR_BITS, LIS3DH_REG_CTRL1_ODR_SHIFT);
 }
 
 /**
@@ -498,90 +378,108 @@ void Adafruit_LIS3DH::getSensor(sensor_t* sensor) {
  */
 bool Adafruit_LIS3DH::int1Cfg(lis3dh_interruptMode_t intMode, lis3dh_interruptEnable_t intEn, float threshold, float duration, lis3dh_intPin_t intPin, bool intLatched)
 {
+    int1Disable();
+    readInt1Status();
     if (intPin == LIS3DH_INT1_PIN)
     {
-        writeRegBits(LIS3DH_REG_CTRL3, 1, 1, 6);
-        // Adafruit_BusIO_Register _ctrl_reg3 = Adafruit_BusIO_Register(
-        //     i2c_dev, spi_dev, ADDRBIT8_HIGH_TOREAD, LIS3DH_REG_CTRL3, 1);
-        // Adafruit_BusIO_RegisterBits ia1_bits =
-        //     Adafruit_BusIO_RegisterBits(&_ctrl_reg3, 1, 6);
-        // ia1_bits.write(1);
+        writeRegBits(LIS3DH_REG_CTRL3, 1, LIS3DH_REG_CTRL3_I1_IA1_BITS, LIS3DH_REG_CTRL3_I1_IA1_SHIFT);
+        if (intLatched)
+        {
+            writeRegBits(LIS3DH_REG_CTRL5, 1, LIS3DH_REG_CTRL5_LIR_INT1_BITS, LIS3DH_REG_CTRL5_LIR_INT1_SHIFT);
+        }
+        else
+        {
+            writeRegBits(LIS3DH_REG_CTRL5, 0, LIS3DH_REG_CTRL5_LIR_INT1_BITS, LIS3DH_REG_CTRL5_LIR_INT1_SHIFT);
+        }
     }
     else
     {
-        writeRegBits(LIS3DH_REG_CTRL6, 1, 1, 6);
-        // Adafruit_BusIO_Register _ctrl_reg6 = Adafruit_BusIO_Register(
-        //     i2c_dev, spi_dev, ADDRBIT8_HIGH_TOREAD, LIS3DH_REG_CTRL6, 1);
-        // Adafruit_BusIO_RegisterBits ia1_bits =
-        //     Adafruit_BusIO_RegisterBits(&_ctrl_reg6, 1, 6);
-        // ia1_bits.write(1);
+        writeRegBits(LIS3DH_REG_CTRL6, 1, LIS3DH_REG_CTRL6_I2_IA1_BITS, LIS3DH_REG_CTRL6_I2_IA1_SHIFT);
+        if (intLatched)
+        {
+            writeRegBits(LIS3DH_REG_CTRL5, 1, LIS3DH_REG_CTRL5_LIR_INT2_BITS, LIS3DH_REG_CTRL5_LIR_INT2_SHIFT);
+        }
+        else
+        {
+            writeRegBits(LIS3DH_REG_CTRL5, 0, LIS3DH_REG_CTRL5_LIR_INT2_BITS, LIS3DH_REG_CTRL5_LIR_INT2_SHIFT);
+        }
     }
-    writeRegBits(LIS3DH_REG_CTRL5, 0, 1, 2);
-    // Adafruit_BusIO_Register _ctrl_reg5 = Adafruit_BusIO_Register(
-    //     i2c_dev, spi_dev, ADDRBIT8_HIGH_TOREAD, LIS3DH_REG_CTRL5, 1);
+    writeRegBits(LIS3DH_REG_CTRL5, 0, LIS3DH_REG_CTRL5_D4D_INT1_BITS, LIS3DH_REG_CTRL5_D4D_INT1_SHIFT);//disable D4D on INT1
 
-    // Adafruit_BusIO_RegisterBits _d4d_int1_bits =
-    //     Adafruit_BusIO_RegisterBits(&_ctrl_reg5, 1, 2);
-    // _d4d_int1_bits.write(0);
-    if (intLatched)
-    {
-        writeRegBits(LIS3DH_REG_CTRL5, 1, 1, 3);
-        // Adafruit_BusIO_RegisterBits lir_int_bits =
-        //     Adafruit_BusIO_RegisterBits(&_ctrl_reg5, 1, 3);
-        // lir_int_bits.write(1);
-    }
-    else
-    {
-        writeRegBits(LIS3DH_REG_CTRL5, 0, 1, 3);
-        // Adafruit_BusIO_RegisterBits lir_int_bits =
-        //     Adafruit_BusIO_RegisterBits(&_ctrl_reg5, 1, 3);
-        // lir_int_bits.write(0);
-    }
 
     writeReg(LIS3DH_REG_INT1THS, (uint8_t)((round((threshold * 1000) / getIntRangeLsb())) & 0x7F));
-
-    // Adafruit_BusIO_Register _int1_ths = Adafruit_BusIO_Register(
-    //     i2c_dev, spi_dev, ADDRBIT8_HIGH_TOREAD, LIS3DH_REG_INT1THS, 1);
-    // _int1_ths.write(regThs);
-
     writeReg(LIS3DH_REG_INT1DUR, (uint8_t)((round((duration) / getOdrTime())) & 0x7F));
-
-    // uint8_t regDur = (uint8_t)((round((duration) / getOdrTime())) & 0x7F);
-    // Adafruit_BusIO_Register _int1_dur = Adafruit_BusIO_Register(
-    //     i2c_dev, spi_dev, ADDRBIT8_HIGH_TOREAD, LIS3DH_REG_INT1DUR, 1);
-    // _int1_dur.write(regDur);
-    // Serial.printf("regDur: %d\r\n", regDur);
-
     writeReg(LIS3DH_REG_INT1CFG, (uint8_t)(intMode | intEn));
-    // Adafruit_BusIO_Register _int1_cfg = Adafruit_BusIO_Register(
-    //     i2c_dev, spi_dev, ADDRBIT8_HIGH_TOREAD, LIS3DH_REG_INT1CFG, 1);
-    // _int1_cfg.write(intMode | intEn);
-    // Serial.printf("regcfg: 0x%X\r\n", intMode | intEn);
+    return true;
+}
+
+/**
+ * @brief Configure INT2
+ *
+ * @param intMode Interrupt mode
+ * @param intEn Interrupt Enable Bits. Select which axis and thershold to trigger.
+ * @param threshold Interrupt threshold in g.
+ * @param duration Minimum event duration in seconds.
+ * @param intPin Interrupt pin on which to set the IA1.
+ * @param intLatched Interrupt is latched or not.
+ * @return bool True on success.
+ */
+bool Adafruit_LIS3DH::int2Cfg(lis3dh_interruptMode_t intMode, lis3dh_interruptEnable_t intEn, float threshold, float duration, lis3dh_intPin_t intPin, bool intLatched)
+{
+    int2Disable();
+    readInt2Status();
+    if (intPin == LIS3DH_INT1_PIN)
+    {
+        writeRegBits(LIS3DH_REG_CTRL3, 1, LIS3DH_REG_CTRL3_I1_IA2_BITS, LIS3DH_REG_CTRL3_I1_IA2_SHIFT);
+        if (intLatched)
+        {
+            writeRegBits(LIS3DH_REG_CTRL5, 1, LIS3DH_REG_CTRL5_LIR_INT1_BITS, LIS3DH_REG_CTRL5_LIR_INT1_SHIFT);
+        }
+        else
+        {
+            writeRegBits(LIS3DH_REG_CTRL5, 0, LIS3DH_REG_CTRL5_LIR_INT1_BITS, LIS3DH_REG_CTRL5_LIR_INT1_SHIFT);
+        }
+    }
+    else
+    {
+        writeRegBits(LIS3DH_REG_CTRL6, 1, LIS3DH_REG_CTRL6_I2_IA2_BITS, LIS3DH_REG_CTRL6_I2_IA2_SHIFT);
+        if (intLatched)
+        {
+            writeRegBits(LIS3DH_REG_CTRL5, 1, LIS3DH_REG_CTRL5_LIR_INT2_BITS, LIS3DH_REG_CTRL5_LIR_INT2_SHIFT);
+        }
+        else
+        {
+            writeRegBits(LIS3DH_REG_CTRL5, 0, LIS3DH_REG_CTRL5_LIR_INT2_BITS, LIS3DH_REG_CTRL5_LIR_INT2_SHIFT);
+        }
+    }
+    writeRegBits(LIS3DH_REG_CTRL5, 0, LIS3DH_REG_CTRL5_D4D_INT2_BITS, LIS3DH_REG_CTRL5_D4D_INT2_SHIFT); //disable D4D on INT2
 
 
-
+    writeReg(LIS3DH_REG_INT2THS, (uint8_t)((round((threshold * 1000) / getIntRangeLsb())) & 0x7F));
+    writeReg(LIS3DH_REG_INT2DUR, (uint8_t)((round((duration) / getOdrTime())) & 0x7F));
+    writeReg(LIS3DH_REG_INT2CFG, (uint8_t)(intMode | intEn));
     return true;
 }
 
 uint8_t Adafruit_LIS3DH::readInt1Status()
 {
-    Adafruit_BusIO_Register _int1_src = Adafruit_BusIO_Register(
-        i2c_dev, spi_dev, ADDRBIT8_HIGH_TOREAD, LIS3DH_REG_INT1SRC, 1);
-    return _int1_src.read();
+    return readReg(LIS3DH_REG_INT1SRC);
+}
 
+uint8_t Adafruit_LIS3DH::readInt2Status()
+{
+    return readReg(LIS3DH_REG_INT2SRC);
 }
 
 bool Adafruit_LIS3DH::int1Disable()
 {
-    Adafruit_BusIO_Register _int1Cfg = Adafruit_BusIO_Register(
-        i2c_dev, spi_dev, ADDRBIT8_HIGH_TOREAD, LIS3DH_REG_INT1CFG, 1);
-
-    Adafruit_BusIO_RegisterBits int_en_bits =
-        Adafruit_BusIO_RegisterBits(&_int1Cfg, 6, 0);
-    int_en_bits.write(LIS3DH_INT_CFG_DISABLE);
-    return true;
+    return writeReg(LIS3DH_REG_INT1CFG, 0);
 }
 
+bool Adafruit_LIS3DH::int2Disable()
+{
+    return writeReg(LIS3DH_REG_INT2CFG, 0);
+}
 
 float Adafruit_LIS3DH::getOdrTime()
 {
@@ -640,42 +538,33 @@ float Adafruit_LIS3DH::getOdrTime()
 
 void Adafruit_LIS3DH::setPowerMode(lis3dh_powerMode_t powerMode)
 {
-    Adafruit_BusIO_Register _ctrl1 = Adafruit_BusIO_Register(
-        i2c_dev, spi_dev, ADDRBIT8_HIGH_TOREAD, LIS3DH_REG_CTRL1, 1);
-    Adafruit_BusIO_Register _ctrl4 = Adafruit_BusIO_Register(
-        i2c_dev, spi_dev, ADDRBIT8_HIGH_TOREAD, LIS3DH_REG_CTRL4, 1);
-    Adafruit_BusIO_RegisterBits lpen_bits =
-        Adafruit_BusIO_RegisterBits(&_ctrl1, 1, 3);
-    Adafruit_BusIO_RegisterBits hr_bits =
-        Adafruit_BusIO_RegisterBits(&_ctrl4, 1, 3);
-
     switch (powerMode)
     {
         case LIS3DH_PM_POWER_DOWN:
         {
             setDataRate(LIS3DH_DATARATE_POWERDOWN);
-            hr_bits.write(0);
+            writeRegBits(LIS3DH_REG_CTRL4, 0, LIS3DH_REG_CTRL4_HR_BITS, LIS3DH_REG_CTRL4_HR_SHIFT);
             _powerMode = powerMode;
             _dataScale = 1;
         }break;
         case LIS3DH_PM_LOW_POWER:
         {
-            hr_bits.write(0);
-            lpen_bits.write(1);
+            writeRegBits(LIS3DH_REG_CTRL4, 0, LIS3DH_REG_CTRL4_HR_BITS, LIS3DH_REG_CTRL4_HR_SHIFT);
+            writeRegBits(LIS3DH_REG_CTRL1, 1, LIS3DH_REG_CTRL1_LPEN_BITS, LIS3DH_REG_CTRL1_LPEN_SHIFT);
             _powerMode = powerMode;
             _dataScale = LIS3DH_LOW_POWER_MODE_DATA_SCALE;
         }break;
         case LIS3DH_PM_NORMAL:
         {
-            hr_bits.write(0);
-            lpen_bits.write(0);
+            writeRegBits(LIS3DH_REG_CTRL4, 0, LIS3DH_REG_CTRL4_HR_BITS, LIS3DH_REG_CTRL4_HR_SHIFT);
+            writeRegBits(LIS3DH_REG_CTRL1, 0, LIS3DH_REG_CTRL1_LPEN_BITS, LIS3DH_REG_CTRL1_LPEN_SHIFT);
             _powerMode = powerMode;
             _dataScale = LIS3DH_NORMAL_MODE_DATA_SCALE;
         }break;
         case LIS3DH_PM_HIGH_RES:
         {
-            hr_bits.write(1);
-            lpen_bits.write(0);
+            writeRegBits(LIS3DH_REG_CTRL4, 1, LIS3DH_REG_CTRL4_HR_BITS, LIS3DH_REG_CTRL4_HR_SHIFT);
+            writeRegBits(LIS3DH_REG_CTRL1, 0, LIS3DH_REG_CTRL1_LPEN_BITS, LIS3DH_REG_CTRL1_LPEN_SHIFT);
             _powerMode = powerMode;
             _dataScale = LIS3DH_HIGH_RES_MODE_DATA_SCALE;
         }break;
@@ -684,28 +573,21 @@ void Adafruit_LIS3DH::setPowerMode(lis3dh_powerMode_t powerMode)
 
 lis3dh_powerMode_t Adafruit_LIS3DH::getPowerMode()
 {
-    Adafruit_BusIO_Register _ctrl1 = Adafruit_BusIO_Register(
-        i2c_dev, spi_dev, ADDRBIT8_HIGH_TOREAD, LIS3DH_REG_CTRL1, 1);
-    Adafruit_BusIO_Register _ctrl4 = Adafruit_BusIO_Register(
-        i2c_dev, spi_dev, ADDRBIT8_HIGH_TOREAD, LIS3DH_REG_CTRL4, 1);
-    Adafruit_BusIO_RegisterBits lpen_bits =
-        Adafruit_BusIO_RegisterBits(&_ctrl1, 1, 3);
-    Adafruit_BusIO_RegisterBits hr_bits =
-        Adafruit_BusIO_RegisterBits(&_ctrl4, 1, 3);
-
+    uint8_t lpenBits = readRegBits(LIS3DH_REG_CTRL1, LIS3DH_REG_CTRL1_LPEN_BITS, LIS3DH_REG_CTRL1_LPEN_SHIFT);
+    uint8_t hrBits = readRegBits(LIS3DH_REG_CTRL4, LIS3DH_REG_CTRL4_HR_BITS, LIS3DH_REG_CTRL4_HR_SHIFT);
     if (_odr == LIS3DH_DATARATE_POWERDOWN)
     {
         _powerMode = LIS3DH_PM_POWER_DOWN;
     }
-    else if (lpen_bits.read() == 1 && hr_bits.read() == 0)
+    else if (lpenBits == 1 && hrBits == 0)
     {
         _powerMode = LIS3DH_PM_LOW_POWER;
     }
-    else if (lpen_bits.read() == 0 && hr_bits.read() == 0)
+    else if (lpenBits == 0 && hrBits == 0)
     {
         _powerMode = LIS3DH_PM_NORMAL;
     }
-    else if (lpen_bits.read() == 0 && hr_bits.read() == 1)
+    else if (lpenBits == 0 && hrBits == 1)
     {
         _powerMode = LIS3DH_PM_HIGH_RES;
     }
@@ -715,12 +597,7 @@ lis3dh_powerMode_t Adafruit_LIS3DH::getPowerMode()
 
 void Adafruit_LIS3DH::enableAxes(lis3dh_activeAxis_t activeAxis)
 {
-    Adafruit_BusIO_Register _ctrl1 = Adafruit_BusIO_Register(
-        i2c_dev, spi_dev, ADDRBIT8_HIGH_TOREAD, LIS3DH_REG_CTRL1, 1);
-    Adafruit_BusIO_RegisterBits axes_en_bits =
-        Adafruit_BusIO_RegisterBits(&_ctrl1, 3, 0);
-
-    axes_en_bits.write(activeAxis);
+    writeRegBits(LIS3DH_REG_CTRL1, activeAxis, LIS3DH_REG_CTRL1_AXIS_EN_BITS, LIS3DH_REG_CTRL1_AXIS_EN_SHIFT);
 }
 
 uint8_t Adafruit_LIS3DH::getDataResolution()
@@ -781,27 +658,62 @@ void Adafruit_LIS3DH::enableFifo(lis3dh_fifoMode_t fifoMode, uint8_t fifoTh)
         return;
     }
     disableFifo();
-    writeRegBits(LIS3DH_REG_FIFOCTRL, fifoTh, 5, 0);
-    writeRegBits(LIS3DH_REG_FIFOCTRL, fifoMode, 2, 6);
-    writeRegBits(LIS3DH_REG_CTRL5, 1, 1, 6);
+    writeRegBits(LIS3DH_REG_FIFOCTRL, fifoTh, LIS3DH_REG_FIFOCTRL_FTH_BITS, LIS3DH_REG_FIFOCTRL_FTH_SHIFT);
+    writeRegBits(LIS3DH_REG_FIFOCTRL, fifoMode, LIS3DH_REG_FIFOCTRL_FM_BITS, LIS3DH_REG_FIFOCTRL_FM_SHIFT);
+    writeRegBits(LIS3DH_REG_CTRL5, 1, LIS3DH_REG_CTRL5_FIFO_EN_BITS, LIS3DH_REG_CTRL5_FIFO_EN_SHIFT);
     _fifoEnabled = true;
 }
 
 void Adafruit_LIS3DH::disableFifo()
 {
-    writeRegBits(LIS3DH_REG_CTRL5, 0, 1, 6);
-    writeRegBits(LIS3DH_REG_FIFOCTRL, LIS3DH_FIFO_MODE_BYPASS, 2, 6);
+    writeRegBits(LIS3DH_REG_CTRL5, 0, LIS3DH_REG_CTRL5_FIFO_EN_BITS, LIS3DH_REG_CTRL5_FIFO_EN_SHIFT);
+    writeRegBits(LIS3DH_REG_FIFOCTRL, LIS3DH_FIFO_MODE_BYPASS, LIS3DH_REG_FIFOCTRL_FM_BITS, LIS3DH_REG_FIFOCTRL_FM_SHIFT);
     _fifoEnabled = false;
 }
 
 uint8_t Adafruit_LIS3DH::getFifoSize()
 {
-    return readRegBits(LIS3DH_REG_FIFOSRC, 5, 0);
+    return readRegBits(LIS3DH_REG_FIFOSRC, LIS3DH_REG_FIFOSRC_FSS_BITS, LIS3DH_REG_FIFOSRC_FSS_SHIFT);
 }
 
 bool Adafruit_LIS3DH::fifoIsEmpty()
 {
-    return readRegBits(LIS3DH_REG_FIFOSRC, 1, 5);
+    return readRegBits(LIS3DH_REG_FIFOSRC, LIS3DH_REG_FIFOSRC_EMPTY_BITS, LIS3DH_REG_FIFOSRC_EMPTY_SHIFT);
+}
+
+uint8_t Adafruit_LIS3DH::readStatusReg()
+{
+    return readReg(LIS3DH_REG_STATUS2);
+}
+
+float Adafruit_LIS3DH::getPitch()
+{
+    float pitch = atan(x_g / sqrt(pow(y_g, 2) + pow(z_g, 2)));
+    pitch = pitch * (180.0 / 3.14159265358979323846);
+    if (z_g < 0 && x_g>0)
+    {
+        pitch = 180 - pitch;
+    }
+    else if (z_g < 0 && x_g < 0)
+    {
+        pitch = -180 - pitch;
+    }
+    return pitch;
+}
+
+float Adafruit_LIS3DH::getRoll()
+{
+    float roll = atan(y_g / sqrt(pow(x_g, 2) + pow(z_g, 2)));
+    roll = roll * (180.0 / 3.14159265358979323846);
+    if(z_g<0 && y_g>0)
+    {
+        roll = 180 - roll;
+    }
+    else if (z_g<0 && y_g<0)
+    {
+        roll = -180 - roll;
+    }
+    return roll;
 }
 
 uint8_t Adafruit_LIS3DH::readReg(uint8_t regAddr)
@@ -819,21 +731,21 @@ bool Adafruit_LIS3DH::readRegBuffer(uint8_t regAddr, uint8_t* buf, uint8_t bufLe
     return _reg.read(buf, bufLen);
 }
 
-void Adafruit_LIS3DH::writeReg(uint8_t regAddr, uint8_t regValue)
+bool Adafruit_LIS3DH::writeReg(uint8_t regAddr, uint8_t regValue)
 {
     Adafruit_BusIO_Register _reg = Adafruit_BusIO_Register(
         i2c_dev, spi_dev, ADDRBIT8_HIGH_TOREAD, regAddr, 1);
-    _reg.write(regValue);
+    return _reg.write(regValue);
 }
 
-void Adafruit_LIS3DH::writeRegBits(uint8_t regAddr, uint8_t regValue, uint8_t bits, uint8_t shift)
+bool Adafruit_LIS3DH::writeRegBits(uint8_t regAddr, uint8_t regValue, uint8_t bits, uint8_t shift)
 {
     Adafruit_BusIO_Register _reg = Adafruit_BusIO_Register(
         i2c_dev, spi_dev, ADDRBIT8_HIGH_TOREAD, regAddr, 1);
 
     Adafruit_BusIO_RegisterBits _reg_bits =
         Adafruit_BusIO_RegisterBits(&_reg, bits, shift);
-    _reg_bits.write(regValue);
+    return _reg_bits.write(regValue);
 }
 
 uint8_t Adafruit_LIS3DH::readRegBits(uint8_t regAddr, uint8_t bits, uint8_t shift)

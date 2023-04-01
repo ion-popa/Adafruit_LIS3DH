@@ -35,7 +35,6 @@
 #include <Adafruit_BusIO_Register.h>
 #include <Adafruit_I2CDevice.h>
 #include <Adafruit_SPIDevice.h>
-#include <Adafruit_Sensor.h>
 
  /** I2C ADDRESS/BITS **/
 #define LIS3DH_DEFAULT_ADDRESS (0x18) // if SDO/SA0 is 3V, its 0x19
@@ -91,6 +90,18 @@
    * X axis disabled; 1: X axis enabled)
    */
 #define LIS3DH_REG_CTRL1 0x20
+#define LIS3DH_REG_CTRL1_XEN_BITS 1
+#define LIS3DH_REG_CTRL1_XEN_SHIFT 0
+#define LIS3DH_REG_CTRL1_YEN_BITS 1
+#define LIS3DH_REG_CTRL1_YEN_SHIFT 1
+#define LIS3DH_REG_CTRL1_ZEN_BITS 1
+#define LIS3DH_REG_CTRL1_ZEN_SHIFT 2
+#define LIS3DH_REG_CTRL1_LPEN_BITS 1
+#define LIS3DH_REG_CTRL1_LPEN_SHIFT 3
+#define LIS3DH_REG_CTRL1_AXIS_EN_BITS 3
+#define LIS3DH_REG_CTRL1_AXIS_EN_SHIFT 0
+#define LIS3DH_REG_CTRL1_ODR_BITS 4
+#define LIS3DH_REG_CTRL1_ODR_SHIFT 4
    /*!
     *  CTRL_REG2
     *  [HPM1, HPM0, HPCF2, HPCF1, FDS, HPCLICK, HPIS2, HPIS1]
@@ -106,6 +117,18 @@
     *filter bypassed; 1: filter enabled)
     */
 #define LIS3DH_REG_CTRL2 0x21
+#define LIS3DH_REG_CTRL2_HP_IA1_BITS 1
+#define LIS3DH_REG_CTRL2_HP_IA1_SHIFT 0
+#define LIS3DH_REG_CTRL2_HP_IA2_BITS 1
+#define LIS3DH_REG_CTRL2_HP_IA2_SHIFT 1
+#define LIS3DH_REG_CTRL2_HPCLICK_BITS 1
+#define LIS3DH_REG_CTRL2_HPCLICK_SHIFT 2
+#define LIS3DH_REG_CTRL2_FDS_BITS 1
+#define LIS3DH_REG_CTRL2_FDS_SHIFT 3
+#define LIS3DH_REG_CTRL2_HPCF_BITS 2
+#define LIS3DH_REG_CTRL2_HPCF_SHIFT 4
+#define LIS3DH_REG_CTRL2_HPM_BITS 2
+#define LIS3DH_REG_CTRL2_HPM_SHIFT 6
     /*!
      *  CTRL_REG3
      *  [I1_CLICK, I1_AOI1, I1_AOI2, I1_DRDY1, I1_DRDY2, I1_WTM, I1_OVERRUN, --]
@@ -125,6 +148,21 @@
      * 							 (0: Disable; 1: Enable)
      */
 #define LIS3DH_REG_CTRL3 0x22
+#define LIS3DH_REG_CTRL3_I1_OVERRUN_BITS 1
+#define LIS3DH_REG_CTRL3_I1_OVERRUN_SHIFT 1
+#define LIS3DH_REG_CTRL3_I1_WTM_BITS 1
+#define LIS3DH_REG_CTRL3_I1_WTM_SHIFT 2
+#define LIS3DH_REG_CTRL3_I1_321DA_BITS 1
+#define LIS3DH_REG_CTRL3_I1_321DA_SHIFT 3
+#define LIS3DH_REG_CTRL3_I1_ZYXDA_BITS 1
+#define LIS3DH_REG_CTRL3_I1_ZYXDA_SHIFT 4
+#define LIS3DH_REG_CTRL3_I1_IA2_BITS 1
+#define LIS3DH_REG_CTRL3_I1_IA2_SHIFT 5
+#define LIS3DH_REG_CTRL3_I1_IA1_BITS 1
+#define LIS3DH_REG_CTRL3_I1_IA1_SHIFT 6
+#define LIS3DH_REG_CTRL3_I1_CLICK_BITS 1
+#define LIS3DH_REG_CTRL3_I1_CLICK_SHIFT 7
+
      /*!
       *  CTRL_REG4
       *  [BDU, BLE, FS1, FS0, HR, ST1, ST0, SIM]
@@ -142,6 +180,18 @@
       *            (0: 4-wire interface; 1: 3-wire interface).
       */
 #define LIS3DH_REG_CTRL4 0x23
+#define LIS3DH_REG_CTRL4_SIM_BITS 1
+#define LIS3DH_REG_CTRL4_SIM_SHIFT 0
+#define LIS3DH_REG_CTRL4_ST_BITS 2
+#define LIS3DH_REG_CTRL4_ST_SHIFT 1
+#define LIS3DH_REG_CTRL4_HR_BITS 1
+#define LIS3DH_REG_CTRL4_HR_SHIFT 3
+#define LIS3DH_REG_CTRL4_FS_BITS 2
+#define LIS3DH_REG_CTRL4_FS_SHIFT 4
+#define LIS3DH_REG_CTRL4_BLE_BITS 1
+#define LIS3DH_REG_CTRL4_BLE_SHIFT 6
+#define LIS3DH_REG_CTRL4_BDU_BITS 1
+#define LIS3DH_REG_CTRL4_BDU_SHIFT 7
       /*!
        *  CTRL_REG5
        *  [BOOT, FIFO_EN, --, --, LIR_INT1, D4D_INT1, 0, 0]
@@ -155,12 +205,37 @@
        * detection is enabled on INT1 when 6D bit on INT1_CFG is set to 1.
        */
 #define LIS3DH_REG_CTRL5 0x24
+#define LIS3DH_REG_CTRL5_D4D_INT2_BITS 1
+#define LIS3DH_REG_CTRL5_D4D_INT2_SHIFT 0
+#define LIS3DH_REG_CTRL5_LIR_INT2_BITS 1
+#define LIS3DH_REG_CTRL5_LIR_INT2_SHIFT 1
+#define LIS3DH_REG_CTRL5_D4D_INT1_BITS 1
+#define LIS3DH_REG_CTRL5_D4D_INT1_SHIFT 2
+#define LIS3DH_REG_CTRL5_LIR_INT1_BITS 1
+#define LIS3DH_REG_CTRL5_LIR_INT1_SHIFT 3
+#define LIS3DH_REG_CTRL5_FIFO_EN_BITS 1
+#define LIS3DH_REG_CTRL5_FIFO_EN_SHIFT 6
+#define LIS3DH_REG_CTRL5_BOOT_BITS 1
+#define LIS3DH_REG_CTRL5_BOOT_SHIFT 7
 
        /*!
         *  CTRL_REG6
         *  [I2_CLICKen, I2_INT1, 0, BOOT_I1, 0, --, H_L, -]
         */
 #define LIS3DH_REG_CTRL6 0x25
+#define LIS3DH_REG_CTRL6_INT_POLARITY_BITS 1
+#define LIS3DH_REG_CTRL6_INT_POLARITY_SHIFT 1
+#define LIS3DH_REG_CTRL6_I2_ACT_BITS 1
+#define LIS3DH_REG_CTRL6_I2_ACT_SHIFT 3
+#define LIS3DH_REG_CTRL6_I2_BOOT_BITS 1
+#define LIS3DH_REG_CTRL6_I2_BOOT_SHIFT 4
+#define LIS3DH_REG_CTRL6_I2_IA2_BITS 1
+#define LIS3DH_REG_CTRL6_I2_IA2_SHIFT 5
+#define LIS3DH_REG_CTRL6_I2_IA1_BITS 1
+#define LIS3DH_REG_CTRL6_I2_IA1_SHIFT 6
+#define LIS3DH_REG_CTRL6_I2_CLICK_BITS 1
+#define LIS3DH_REG_CTRL6_I2_CLICK_SHIFT 7
+
 #define LIS3DH_REG_REFERENCE 0x26 /**< REFERENCE/DATACAPTURE **/
         /*!
          *  STATUS_REG
@@ -182,6 +257,23 @@
          * available)
          */
 #define LIS3DH_REG_STATUS2 0x27
+#define LIS3DH_REG_STATUS2_XDA_BITS 1
+#define LIS3DH_REG_STATUS2_XDA_SHIFT 0
+#define LIS3DH_REG_STATUS2_YDA_BITS 1
+#define LIS3DH_REG_STATUS2_YDA_SHIFT 1
+#define LIS3DH_REG_STATUS2_ZDA_BITS 1
+#define LIS3DH_REG_STATUS2_ZDA_SHIFT 2
+#define LIS3DH_REG_STATUS2_ZYXDA_BITS 1
+#define LIS3DH_REG_STATUS2_ZYXDA_SHIFT 3
+#define LIS3DH_REG_STATUS2_XOR_BITS 1
+#define LIS3DH_REG_STATUS2_XOR_SHIFT 4
+#define LIS3DH_REG_STATUS2_YOR_BITS 1
+#define LIS3DH_REG_STATUS2_YOR_SHIFT 5
+#define LIS3DH_REG_STATUS2_ZOR_BITS 1
+#define LIS3DH_REG_STATUS2_ZOR_SHIFT 6
+#define LIS3DH_REG_STATUS2_ZYXOR_BITS 1
+#define LIS3DH_REG_STATUS2_ZYXOR_SHIFT 7
+
 #define LIS3DH_REG_OUT_X_L 0x28 /**< X-axis acceleration data. Low value */
 #define LIS3DH_REG_OUT_X_H 0x29 /**< X-axis acceleration data. High value */
 #define LIS3DH_REG_OUT_Y_L 0x2A /**< Y-axis acceleration data. Low value */
@@ -198,9 +290,23 @@
           *   FTH4:0   Default value: 0
           */
 #define LIS3DH_REG_FIFOCTRL 0x2E
-#define LIS3DH_REG_FIFOSRC                                                     \
-  0x2F /**< FIFO_SRC_REG [WTM, OVRN_FIFO, EMPTY, FSS4, FSS3, FSS2, FSS1, FSS0] \
-        */
+#define LIS3DH_REG_FIFOCTRL_FTH_BITS 5
+#define LIS3DH_REG_FIFOCTRL_FTH_SHIFT 0
+#define LIS3DH_REG_FIFOCTRL_TR_BITS 1
+#define LIS3DH_REG_FIFOCTRL_TR_SHIFT 5
+#define LIS3DH_REG_FIFOCTRL_FM_BITS 2
+#define LIS3DH_REG_FIFOCTRL_FM_SHIFT 6
+
+#define LIS3DH_REG_FIFOSRC 0x2F /**< FIFO_SRC_REG [WTM, OVRN_FIFO, EMPTY, FSS4, FSS3, FSS2, FSS1, FSS0]*/
+#define LIS3DH_REG_FIFOSRC_FSS_BITS 5
+#define LIS3DH_REG_FIFOSRC_FSS_SHIFT 0
+#define LIS3DH_REG_FIFOSRC_EMPTY_BITS 1
+#define LIS3DH_REG_FIFOSRC_EMPTY_SHIFT 5
+#define LIS3DH_REG_FIFOSRC_OVRN_FIFO_BITS 1
+#define LIS3DH_REG_FIFOSRC_OVRN_FIFO_SHIFT 6
+#define LIS3DH_REG_FIFOSRC_WTM_BITS 1
+#define LIS3DH_REG_FIFOSRC_WTM_SHIFT 7
+
           /*!
            *  INT1_CFG
            *  [AOI, 6D, ZHIE/ZUPE, ZLIE/ZDOWNE, YHIE/YUPE, XHIE/XUPE, XLIE/XDOWNE]
@@ -222,6 +328,10 @@
            * enable interrupt request.)
            */
 #define LIS3DH_REG_INT1CFG 0x30
+#define LIS3DH_REG_INT1CFG_INT_EN_BITS 6
+#define LIS3DH_REG_INT1CFG_INT_EN_SHIFT 0
+#define LIS3DH_REG_INT1CFG_INT_MODE_BITS 2
+#define LIS3DH_REG_INT1CFG_INT_MODE_SHIFT 6
            /*!
             *  INT1_SRC
             *   [0, IA, ZH, ZL, YH, YL, XH, XL]
@@ -241,77 +351,105 @@
             * the latched option  was chosen.
             */
 #define LIS3DH_REG_INT1SRC 0x31
-#define LIS3DH_REG_INT1THS                                                     \
-  0x32 /**< INT1_THS register [0, THS6, THS5, THS4, THS3, THS1, THS0] */
-#define LIS3DH_REG_INT1DUR                                                     \
-  0x33 /**< INT1_DURATION [0, D6, D5, D4, D3, D2, D1, D0] */
+#define LIS3DH_REG_INT1THS 0x32 /**< INT1_THS register [0, THS6, THS5, THS4, THS3, THS1, THS0] */
+
+#define LIS3DH_REG_INT1DUR 0x33 /**< INT1_DURATION [0, D6, D5, D4, D3, D2, D1, D0] */
+
+#define LIS3DH_REG_INT2CFG 0x34
+#define LIS3DH_REG_INT2CFG_INT_EN_BITS 6
+#define LIS3DH_REG_INT2CFG_INT_EN_SHIFT 0
+#define LIS3DH_REG_INT2CFG_INT_MODE_BITS 2
+#define LIS3DH_REG_INT2CFG_INT_MODE_SHIFT 6
+
             /*!
-             *  CLICK_CFG
-             *   [--, --, ZD, ZS, YD, YS, XD, XS]
-             *   ZD  Enable interrupt double CLICK-CLICK on Z axis. Default value: 0
-             *       (0: disable interrupt request;
-             *        1: enable interrupt request on measured accel. value higher than
-             * preset threshold) ZS  Enable interrupt single CLICK-CLICK on Z axis. Default
-             * value: 0 (0: disable interrupt request; 1: enable interrupt request on
-             * measured accel. value higher than preset threshold) YD  Enable interrupt
-             * double CLICK-CLICK on Y axis. Default value: 0 (0: disable interrupt request;
-             *        1: enable interrupt request on measured accel. value higher than
-             * preset threshold) YS  Enable interrupt single CLICK-CLICK on Y axis. Default
-             * value: 0 (0: disable interrupt request; 1: enable interrupt request on
-             * measured accel. value higher than preset threshold) XD  Enable interrupt
-             * double CLICK-CLICK on X axis. Default value: 0 (0: disable interrupt request;
-             * 1: enable interrupt request on measured accel. value higher than preset
-             * threshold) XS  Enable interrupt single CLICK-CLICK on X axis. Default value:
-             * 0 (0: disable interrupt request; 1: enable interrupt request on measured
-             * accel. value higher than preset threshold)
+             *  INT2_SRC
+             *   [0, IA, ZH, ZL, YH, YL, XH, XL]
+             *    IA  Interrupt active. Default value: 0
+             *        (0: no interrupt has been generated; 1: one or more interrupts have
+             * been generated) ZH  Z high. Default value: 0 (0: no interrupt, 1: Z High
+             * event has occurred) ZL  Z low. Default value: 0 (0: no interrupt; 1: Z Low
+             * event has occurred) YH  Y high. Default value: 0 (0: no interrupt, 1: Y High
+             * event has occurred) YL  Y low. Default value: 0 (0: no interrupt, 1: Y Low
+             * event has occurred) XH  X high. Default value: 0 (0: no interrupt, 1: X High
+             * event has occurred) XL  X low. Default value: 0 (0: no interrupt, 1: X Low
+             * event has occurred)
+             *
+             *    Interrupt 1 source register. Read only register.
+             *    Reading at this address clears INT1_SRC IA bit (and the interrupt signal
+             * on INT 1 pin) and allows the refreshment of data in the INT1_SRC register if
+             * the latched option  was chosen.
              */
-#define LIS3DH_REG_CLICKCFG 0x38
+#define LIS3DH_REG_INT2SRC 0x35
+#define LIS3DH_REG_INT2THS 0x36 /**< INT2_THS register [0, THS6, THS5, THS4, THS3, THS1, THS0] */
+#define LIS3DH_REG_INT2DUR 0x37 /**< INT2_DURATION [0, D6, D5, D4, D3, D2, D1, D0] */
+
              /*!
-              *  CLICK_SRC
-              *   [-, IA, DCLICK, SCLICK, Sign, Z, Y, X]
-              *   IA  Interrupt active. Default value: 0
-              *       (0: no interrupt has been generated; 1: one or more interrupts have
-              * been generated) DCLICK  Double CLICK-CLICK enable. Default value: 0 (0:double
-              * CLICK-CLICK detection disable, 1: double CLICK-CLICK detection enable) SCLICK
-              * Single CLICK-CLICK enable. Default value: 0 (0:Single CLICK-CLICK detection
-              * disable, 1: single CLICK-CLICK detection enable) Sign    CLICK-CLICK Sign.
-              *           (0: positive detection, 1: negative detection)
-              *   Z       Z CLICK-CLICK detection. Default value: 0
-              *           (0: no interrupt, 1: Z High event has occurred)
-              *   Y       Y CLICK-CLICK detection. Default value: 0
-              *           (0: no interrupt, 1: Y High event has occurred)
-              *   X       X CLICK-CLICK detection. Default value: 0
-              *           (0: no interrupt, 1: X High event has occurred)
+              *  CLICK_CFG
+              *   [--, --, ZD, ZS, YD, YS, XD, XS]
+              *   ZD  Enable interrupt double CLICK-CLICK on Z axis. Default value: 0
+              *       (0: disable interrupt request;
+              *        1: enable interrupt request on measured accel. value higher than
+              * preset threshold) ZS  Enable interrupt single CLICK-CLICK on Z axis. Default
+              * value: 0 (0: disable interrupt request; 1: enable interrupt request on
+              * measured accel. value higher than preset threshold) YD  Enable interrupt
+              * double CLICK-CLICK on Y axis. Default value: 0 (0: disable interrupt request;
+              *        1: enable interrupt request on measured accel. value higher than
+              * preset threshold) YS  Enable interrupt single CLICK-CLICK on Y axis. Default
+              * value: 0 (0: disable interrupt request; 1: enable interrupt request on
+              * measured accel. value higher than preset threshold) XD  Enable interrupt
+              * double CLICK-CLICK on X axis. Default value: 0 (0: disable interrupt request;
+              * 1: enable interrupt request on measured accel. value higher than preset
+              * threshold) XS  Enable interrupt single CLICK-CLICK on X axis. Default value:
+              * 0 (0: disable interrupt request; 1: enable interrupt request on measured
+              * accel. value higher than preset threshold)
               */
-#define LIS3DH_REG_CLICKSRC 0x39
+#define LIS3DH_REG_CLICKCFG 0x38
               /*!
-               *  CLICK_THS
-               *   [-, Ths6, Ths5, Ths4, Ths3, Ths2, Ths1, Ths0]
-               *   Ths6-Ths0  CLICK-CLICK threshold. Default value: 000 0000
+               *  CLICK_SRC
+               *   [-, IA, DCLICK, SCLICK, Sign, Z, Y, X]
+               *   IA  Interrupt active. Default value: 0
+               *       (0: no interrupt has been generated; 1: one or more interrupts have
+               * been generated) DCLICK  Double CLICK-CLICK enable. Default value: 0 (0:double
+               * CLICK-CLICK detection disable, 1: double CLICK-CLICK detection enable) SCLICK
+               * Single CLICK-CLICK enable. Default value: 0 (0:Single CLICK-CLICK detection
+               * disable, 1: single CLICK-CLICK detection enable) Sign    CLICK-CLICK Sign.
+               *           (0: positive detection, 1: negative detection)
+               *   Z       Z CLICK-CLICK detection. Default value: 0
+               *           (0: no interrupt, 1: Z High event has occurred)
+               *   Y       Y CLICK-CLICK detection. Default value: 0
+               *           (0: no interrupt, 1: Y High event has occurred)
+               *   X       X CLICK-CLICK detection. Default value: 0
+               *           (0: no interrupt, 1: X High event has occurred)
                */
-#define LIS3DH_REG_CLICKTHS 0x3A
+#define LIS3DH_REG_CLICKSRC 0x39
                /*!
-                *  TIME_LIMIT
-                *   [-, TLI6, TLI5, TLI4, TLI3, TLI2, TLI1, TLI0]
-                *   TLI7-TLI0  CLICK-CLICK Time Limit. Default value: 000 0000
+                *  CLICK_THS
+                *   [-, Ths6, Ths5, Ths4, Ths3, Ths2, Ths1, Ths0]
+                *   Ths6-Ths0  CLICK-CLICK threshold. Default value: 000 0000
                 */
-#define LIS3DH_REG_TIMELIMIT 0x3B
+#define LIS3DH_REG_CLICKTHS 0x3A
                 /*!
-                 *  TIME_LATANCY
-                 *   [-, TLA6, TLIA5, TLA4, TLA3, TLA2, TLA1, TLA0]
-                 *   TLA7-TLA0  CLICK-CLICK Time Latency. Default value: 000 0000
+                 *  TIME_LIMIT
+                 *   [-, TLI6, TLI5, TLI4, TLI3, TLI2, TLI1, TLI0]
+                 *   TLI7-TLI0  CLICK-CLICK Time Limit. Default value: 000 0000
                  */
-#define LIS3DH_REG_TIMELATENCY 0x3C
+#define LIS3DH_REG_TIMELIMIT 0x3B
                  /*!
-                  *  TIME_WINDOW
-                  *   [TW7, TW6, TW5, TW4, TW3, TW2, TW1, TW0]
-                  *   TW7-TW0  CLICK-CLICK Time window
+                  *  TIME_LATANCY
+                  *   [-, TLA6, TLIA5, TLA4, TLA3, TLA2, TLA1, TLA0]
+                  *   TLA7-TLA0  CLICK-CLICK Time Latency. Default value: 000 0000
                   */
+#define LIS3DH_REG_TIMELATENCY 0x3C
+                  /*!
+                   *  TIME_WINDOW
+                   *   [TW7, TW6, TW5, TW4, TW3, TW2, TW1, TW0]
+                   *   TW7-TW0  CLICK-CLICK Time window
+                   */
 #define LIS3DH_REG_TIMEWINDOW 0x3D
 
 #define LIS3DH_LSB16_TO_KILO_LSB10                                             \
   64000 ///< Scalar to convert from 16-bit lsb to 10-bit and divide by 1k to
-                  ///< convert from milli-gs to gs
+                   ///< convert from milli-gs to gs
 
 #define LIS3DH_LOW_POWER_MODE_DATA_SCALE 256000
 #define LIS3DH_NORMAL_MODE_DATA_SCALE 64000
@@ -415,11 +553,23 @@ typedef enum
     LIS3DH_FIFO_MODE_STREAM_FIFO = 0b11,
 }lis3dh_fifoMode_t;
 
+typedef enum
+{
+    LIS3DH_STATUS_REG_XDA = 0b00000001,
+    LIS3DH_STATUS_REG_YDA = 0b00000010,
+    LIS3DH_STATUS_REG_ZDA = 0b00000100,
+    LIS3DH_STATUS_REG_ZYXDA = 0b00001000,
+    LIS3DH_STATUS_REG_XOR = 0b00010000,
+    LIS3DH_STATUS_REG_YOR = 0b00100000,
+    LIS3DH_STATUS_REG_ZOR = 0b01000000,
+    LIS3DH_STATUS_REG_ZYXOR = 0b10000000,
+}lis3dh_statusReg_t;
+
 /*!
  *  @brief  Class that stores state and functions for interacting with
  *          Adafruit_LIS3DH
  */
-class Adafruit_LIS3DH: public Adafruit_Sensor {
+class Adafruit_LIS3DH {
 public:
     Adafruit_LIS3DH(TwoWire* Wi = &Wire);
     Adafruit_LIS3DH(int8_t cspin, SPIClass* theSPI = &SPI);
@@ -446,9 +596,8 @@ public:
     void setDataRate(lis3dh_dataRate_t dataRate, lis3dh_powerMode_t powerMode = LIS3DH_PM_NORMAL);
     lis3dh_dataRate_t getDataRate(void);
 
-
-    bool getEvent(sensors_event_t* event);
-    void getSensor(sensor_t* sensor);
+    float getPitch();
+    float getRoll();
 
     void setClick(uint8_t c, uint8_t clickthresh, uint8_t timelimit = 10,
         uint8_t timelatency = 20, uint8_t timewindow = 255);
@@ -460,8 +609,15 @@ public:
         lis3dh_intPin_t intPin, bool intLatched);
     uint8_t readInt1Status();
     bool int1Disable();
+
+    bool int2Cfg(lis3dh_interruptMode_t intMode, lis3dh_interruptEnable_t intEn, float threshold, float duration,
+        lis3dh_intPin_t intPin, bool intLatched);
+    uint8_t readInt2Status();
+    bool int2Disable();
     uint8_t getRangeLsb();
     uint8_t getIntRangeLsb();
+
+    uint8_t readStatusReg();
 
     void enableFifo(lis3dh_fifoMode_t fifoMode, uint8_t fifoTh);
     void disableFifo();
@@ -470,8 +626,8 @@ public:
 
     uint8_t readReg(uint8_t regAddr);
     bool readRegBuffer(uint8_t regAddr, uint8_t* buf, uint8_t bufLen);
-    void writeReg(uint8_t regAddr, uint8_t regValue);
-    void writeRegBits(uint8_t regAddr, uint8_t regValue, uint8_t bits, uint8_t shift);
+    bool writeReg(uint8_t regAddr, uint8_t regValue);
+    bool writeRegBits(uint8_t regAddr, uint8_t regValue, uint8_t bits, uint8_t shift);
     uint8_t readRegBits(uint8_t regAddr, uint8_t bits, uint8_t shift);
 
 
