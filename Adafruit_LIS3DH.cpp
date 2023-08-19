@@ -688,13 +688,18 @@ uint8_t Adafruit_LIS3DH::readStatusReg()
 
 float Adafruit_LIS3DH::getPitch()
 {
-    float pitch = atan(x_g / sqrt(pow(y_g, 2) + pow(z_g, 2)));
+    return getPitch(x_g, y_g, z_g);
+}
+
+float Adafruit_LIS3DH::getPitch(float xG, float yG, float zG)
+{
+    float pitch = atan(xG / sqrt(pow(yG, 2) + pow(zG, 2)));
     pitch = pitch * (180.0 / 3.14159265358979323846);
-    if (z_g < 0 && x_g>0)
+    if (zG < 0 && xG>0)
     {
         pitch = 180 - pitch;
     }
-    else if (z_g < 0 && x_g < 0)
+    else if (zG < 0 && xG < 0)
     {
         pitch = -180 - pitch;
     }
@@ -703,13 +708,18 @@ float Adafruit_LIS3DH::getPitch()
 
 float Adafruit_LIS3DH::getRoll()
 {
-    float roll = atan(y_g / sqrt(pow(x_g, 2) + pow(z_g, 2)));
+    return getRoll(x_g, y_g, z_g);
+}
+
+float Adafruit_LIS3DH::getRoll(float xG, float yG, float zG)
+{
+    float roll = atan(yG / sqrt(pow(xG, 2) + pow(zG, 2)));
     roll = roll * (180.0 / 3.14159265358979323846);
-    if(z_g<0 && y_g>0)
+    if(zG<0 && yG>0)
     {
         roll = 180 - roll;
     }
-    else if (z_g<0 && y_g<0)
+    else if (zG<0 && yG<0)
     {
         roll = -180 - roll;
     }

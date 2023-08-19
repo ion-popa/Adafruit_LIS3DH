@@ -597,7 +597,9 @@ public:
     lis3dh_dataRate_t getDataRate(void);
 
     float getPitch();
+    float getPitch(float xG, float yG, float zG);
     float getRoll();
+    float getRoll(float xG, float yG, float zG);
 
     void setClick(uint8_t c, uint8_t clickthresh, uint8_t timelimit = 10,
         uint8_t timelatency = 20, uint8_t timewindow = 255);
